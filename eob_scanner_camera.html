@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EOB Scanner</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body{font-family:Arial;padding:15px;max-width:900px;margin:auto}
+#app{display:none}
+input,button{padding:10px;margin:5px}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:8px}
+#reader{width:100%;max-width:500px}
+</style>
+</head>
+<body>
+
+<div id="login">
+<h2>เข้าสู่ระบบ</h2>
+<input id="username" placeholder="Username"><br>
+<input id="password" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+</div>
+
+<div id="app">
+<h2>ระบบตรวจนับสินค้า EOB</h2>
+
+<div id="reader"></div>
+
+<p>บาร์โค้ด: <input id="barcode"></p>
+<p>จำนวน: <input id="qty" type="number" value="1"></p>
+
+<button onclick="saveItem()">บันทึก</button>
+<button onclick="exportCSV()">ส่งออก CSV</button>
+
+<table>
+<thead><tr><th>บาร์โค้ด</th><th>จำนวน</th></tr></thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+
+<script>
+let items=JSON.parse(localStorage.getItem("eob_items")||"[]");
+
+function login(){
+ if(username.value==="AdminR" && password.value==="1234567890"){
+   document.getElementById("login").style.display="none";
+   document.getElementById("app").style.display="block";
+   render();
+   startScanner();
+ }else{
+   alert("รหัสไม่ถูกต้อง");
+ }
+}
+
+function startScanner(){
+ const scanner=new Html5QrcodeScanner("reader",{
+   fps:10,
+   qrbox:{width:250,height:120}
+ });
+
+ scanner.render((decodedText)=>{
+   document.getElementById("barcode").value=decodedText;
+ });
+}
+
+function saveItem(){
+ let b=barcode.value.trim();
+ let q=parseInt(qty.value||1);
+
+ if(!b) return;
+
+ let found=items.find(x=>x.barcode===b);
+
+ if(found){
+   found.qty+=q;
+ }else{
+   items.push({barcode:b,qty:q});
+ }
+
+ localStorage.setItem("eob_items",JSON.stringify(items));
+ render();
+ barcode.value="";
+ qty.value=1;
+}
+
+function render(){
+ list.innerHTML="";
+ items.forEach(i=>{
+   list.innerHTML+=`<tr><td>${i.barcode}</td><td>${i.qty}</td></tr>`;
+ });
+}
+
+function exportCSV(){
+ let csv="Barcode,Qty\n";
+ items.forEach(i=>{
+   csv+=`${i.barcode},${i.qty}\n`;
+ });
+
+ let blob=new Blob([csv],{type:"text/csv"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="EOB_Count.csv";
+ a.click();
+}
+</script>
+</body>
+</html>
